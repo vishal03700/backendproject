@@ -180,15 +180,19 @@ const getAllDocotrsController = async (req, res) => {
 //BOOK APPOINTMENT
 const bookeAppointmnetController = async (req, res) => {
   try {
-    req.body.date = moment(req.body.date, "DD-MM-YYYY").toISOString();
-    req.body.time = moment(req.body.time, "HH:mm").toISOString();
+    // Keep date and time in original format for display purposes
+    // Don't convert to ISO string as it corrupts the values
     req.body.status = "pending";
     const newAppointment = new appointmentModel(req.body);
     await newAppointment.save();
     const user = await userModel.findOne({ _id: req.body.doctorInfo.userId });
+    
+    // Include date and time in notification message
+    const formattedDate = req.body.date;
+    const formattedTime = req.body.time;
     user.notifcation.push({
       type: "New-appointment-request",
-      message: `A nEw Appointment Request from ${req.body.userInfo.name}`,
+      message: `A new appointment request from ${req.body.userInfo.name} for ${formattedDate} at ${formattedTime}`,
       onCLickPath: "/user/appointments",
     });
     await user.save();
@@ -209,23 +213,31 @@ const bookeAppointmnetController = async (req, res) => {
 // booking bookingAvailabilityController
 const bookingAvailabilityController = async (req, res) => {
   try {
-    const date = moment(req.body.date, "DD-MM-YY").toISOString();
-    const fromTime = moment(req.body.time, "HH:mm")
-      .subtract(1, "hours")
-      .toISOString();
-    const toTime = moment(req.body.time, "HH:mm").add(1, "hours").toISOString();
+    // Keep date in original DD-MM-YYYY format for comparison
+    const date = req.body.date;
+    const time = req.body.time;
     const doctorId = req.body.doctorId;
+    
+    // Query appointments matching the same date
     const appointments = await appointmentModel.find({
       doctorId,
-      date,
-      time: {
-        $gte: fromTime,
-        $lte: toTime,
-      },
+      date: date, // Match exact date string
     });
-    if (appointments.length > 0) {
+    
+    // Filter by time slots that overlap (within 1 hour window)
+    const conflictingAppointments = appointments.filter(apt => {
+      const aptTime = apt.time;
+      const aptDate = apt.date;
+      // Check if same date and time is within 1 hour window
+      if (aptDate === date && aptTime === time) {
+        return true;
+      }
+      return false;
+    });
+    
+    if (conflictingAppointments.length > 0) {
       return res.status(200).send({
-        message: "Appointments not Availibale at this time",
+        message: "Appointments not Available at this time",
         success: true,
       });
     } else {

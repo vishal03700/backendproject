@@ -95,10 +95,14 @@ const updateStatusController = async (req, res) => {
 
     const user = await userModel.findOne({ _id: appointment.userId });
 
-    // Add notification
+    // Include date and time in notification message
+    const appointmentDate = appointment.date;
+    const appointmentTime = appointment.time;
+    
+    // Add notification with date and time
     user.notifcation.push({
       type: "status-updated",
-      message: `Your appointment has been ${status}`,
+      message: `Your appointment on ${appointmentDate} at ${appointmentTime} has been ${status}`,
       onCLickPath: "/doctor-appointments",
     });
 
@@ -109,7 +113,7 @@ const updateStatusController = async (req, res) => {
       const htmlContent = `
         <h2>Appointment Confirmed</h2>
         <p>Dear ${user.name},</p>
-        <p>Your appointment with the doctor has been <strong>approved</strong>.</p>
+        <p>Your appointment on ${appointmentDate} at ${appointmentTime} has been <strong>approved</strong>.</p>
         <p>Thank you for using our service.</p>
       `;
       await sendMail(user.email, "Appointment Approved", htmlContent);
