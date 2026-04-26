@@ -2,6 +2,7 @@ const express = require("express");
 const colors = require("colors");
 const moragan = require("morgan");
 const dotenv = require("dotenv");
+const cors = require("cors");
 const connectDB = require("./config/db");
 
 //dotenv conig
@@ -13,6 +14,9 @@ connectDB();
 //rest obejct
 const app = express();
 
+app.use(cors({
+  origin: "*"
+}));
 //middlewares
 app.use(express.json());
 app.use(moragan("dev"));
